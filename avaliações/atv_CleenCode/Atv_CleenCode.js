@@ -1,45 +1,46 @@
+
+// Função utilitária para validar existência de uma entidade
 const validarExistencia = (resultado, res, tipo) => {
     if (resultado.length === 0) {
         res.status(404).json({
             sucesso: false,
-            mensagem: `${tipo} não encontrado(a)`
-        })
-        return false
+            mensagem: `${tipo} não encontrado`
+        });
+        return false; // Indica que a validação falhou
     }
-    return true
-}
-                                                    // RESOLUÇÃO GET 1
+    return true; // Indica que a validação passou
+};
+
+//Exercício 1 - Usuários
+
 app.get('/usuarios', async (req, res) => {
     try {
-        const listaUsuario = await queryAsync("SELECT * FROM usuarios")
+        const usuarios = await queryAsync("SELECT * FROM usuario")
 
         res.json({
             sucesso: true,
-            dados: listaUsuario
+            dados: usuarios
         })
 
     } catch (erro) {
-        console.error('Erro ao listar usuários:', erro)
         res.status(500).json({
             sucesso: false,
-            mensagem: 'Erro ao buscar usuários',
-            erro: erro.message
+            mensagem: "Erro ao listar usuários"
         })
     }
 })
-
-
-                                                            // GET 2
 
 app.get('/usuarios/:id', async (req, res) => {
     try {
         const { id } = req.params
 
-        const usuario = await queryAsync( "SELECT * FROM usuarios WHERE id = ?",[id]
+        const usuario = await queryAsync(
+            "SELECT * FROM usuario WHERE id = ?",
+            [id]
         )
 
-        if (!validarExistencia(usuario, res, "Usuário")) {
-            return
+        if (!validarExistencia(usuario, res, "Usuario")) {
+            return; // Para a execução se a validação falhar
         }
 
         res.json({
@@ -50,106 +51,114 @@ app.get('/usuarios/:id', async (req, res) => {
     } catch (erro) {
         res.status(500).json({
             sucesso: false,
-            mensagem: 'Erro ao buscar usuário',
-            erro: erro.message
+            mensagem: "Erro ao buscar usuário"
         })
     }
 })
 
-                                                            //RESOLUCÃO POST
+//Exercício 2 - Pedidos
 
-const validarDados = ({ cliente, valor }) => { {}
-    if (!cliente || !valor) {
-    return "Cliente e valor são obrigatórios"
-}
+const validarPedido = ({ cliente, valor }) => {
+    if (!cliente || valor === undefined) {
+        return "Cliente e valor são obrigatórios"
+    }
 
-    if (typeof valor !== 'number' || valor <= 0) {
-    return "Valor inválido"
-}
-return null
+    if (typeof valor !== "number" || valor <= 0) {
+        return "Valor inválido"
+    }
+
+    return null
 }
 
 app.post('/pedidos', async (req, res) => {
-try {
-    const erro = validarDados(req.body)
-
-if (erro) {
-    return res.status(400).json({
-    sucesso: false,
-    mensagem: erro
-})
-}
-
-await queryAsync("INSERT INTO pedido SET ?", [req.body])
-
-    res.status(201).json({
-    sucesso: true,
-    mensagem: "Pedido cadastrado."
-})
-
-} catch (erro) {
-    res.status(500).json({
-    sucesso: false,
-    mensagem: "Erro ao cadastrar pedidos."
-        })
-    }
-})
-// const{cliente,valor} = req.body // pega dois valores que voce da no body e guarda ela em dois parametros especificos nas variaveis(pega valores e salva nas variaveis )
-                                        
-                                                       //RESOLUÇAÕ PUT
-
-app.put('/salas/:id', async (req, res) => {
     try {
-        const { id } = req.params
-        const dados = req.body
+        const erro = validarPedido(req.body)
 
-        const sala = await queryAsync("SELECT * FROM sala WHERE id = ?",[id]
-        )
-
-        if (!validarExistencia(sala, res, "Sala")) {
-            return
-        }
-
-        if (Object.keys(dados).length === 0) {
+        if (erro) {
             return res.status(400).json({
                 sucesso: false,
-                mensagem: "Nenhum dado enviado."
+                mensagem: erro
             })
         }
 
-        await queryAsync( "UPDATE sala SET ? WHERE id = ?",[dados, id]
+        await queryAsync("INSERT INTO pedido SET ?", [req.body])
+
+        res.status(201).json({
+            sucesso: true,
+            mensagem: "Pedido criado com sucesso"
+        })
+
+    } catch (erro) {
+        res.status(500).json({
+            sucesso: false,
+            mensagem: "Erro ao criar pedido"
+        })
+    }
+})
+
+//Exercício 3 - Salas
+
+const buscarSalaPorId = async (id) => {
+    return await queryAsync(
+        "SELECT * FROM sala WHERE id = ?",
+        [id]
+    )
+}
+
+// ATUALIZAR SALA
+app.put('/salas/:id', async (req, res) => {
+    try {
+        const { id } = req.params
+        const dadosAtualizados = req.body
+
+        const sala = await buscarSalaPorId(id)
+
+        if (!validarExistencia(sala, res, "Sala")) {
+            return; 
+        }
+
+        if (Object.keys(dadosAtualizados).length === 0) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: "Nenhum dado enviado"
+            })
+        }
+
+        await queryAsync(
+            "UPDATE sala SET ? WHERE id = ?",
+            [dadosAtualizados, id]
         )
 
         res.json({
             sucesso: true,
-            mensagem: "Sala atualizada"
+            mensagem: "Sala atualizada com sucesso"
         })
 
     } catch (erro) {
-        console.error('Erro ao atualizar sala:', erro)
         res.status(500).json({
             sucesso: false,
-            mensagem: 'Erro ao atualizar sala',
-            erro: erro.message
+            mensagem: "Erro ao atualizar sala"
         })
     }
 })
 
-                                        //RESOLUCÃO DELETE
+// DELETAR SALA
 app.delete('/salas/:id', async (req, res) => {
     try {
         const { id } = req.params
 
-        const sala = await queryAsync("SELECT * FROM sala WHERE id = ?",[id]
-        )
+        const sala = await buscarSalaPorId(id)
 
         if (!validarExistencia(sala, res, "Sala")) {
-            return
+            return; // Para a execução se a validação falhar
         }
 
-        await queryAsync("DELETE FROM sala WHERE id = ?", [id])
+        await queryAsync(
+            "DELETE FROM sala WHERE id = ?",
+            [id]
+        )
 
-        res.status(200).json({
+        res.json({
             sucesso: true,
             mensagem: "Sala removida com sucesso"
         })
@@ -157,8 +166,7 @@ app.delete('/salas/:id', async (req, res) => {
     } catch (erro) {
         res.status(500).json({
             sucesso: false,
-            mensagem: "Erro ao remover sala",
-            erro: erro.message
+            mensagem: "Erro ao remover sala"
         })
     }
 })
